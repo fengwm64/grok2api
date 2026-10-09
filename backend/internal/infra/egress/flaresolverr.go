@@ -65,11 +65,12 @@ func (flaresolverrSolver) Solve(ctx context.Context, cfg ClearanceConfig, proxyU
 	}
 	if proxyURL != "" {
 		proxy := map[string]string{"url": proxyURL}
-		// FlareSolverr v3.3+ uses these fields for authenticated proxy support.
-		// Retain the original URL so older deployments that only consume proxy.url
-		// preserve their existing behavior. Current FlareSolverr reads the host
-		// and port from URL, then uses these fields for credentials.
-		if parseErr == nil && parsedProxy != nil && parsedProxy.User != nil {
+		// FlareSolverr v3.3+ uses these fields for authenticated HTTP, SOCKS4,
+		// and SOCKS5 proxies. Retain the original URL so older deployments that
+		// only consume proxy.url preserve their existing behavior. Schemes that
+		// FlareSolverr does not document for authenticated proxy extensions keep
+		// their existing URL-only behavior.
+		if parseErr == nil && parsedProxy != nil && parsedProxy.User != nil && flaresolverrSupportsProxyAuth(parsedProxy.Scheme) {
 			proxy["username"] = parsedProxy.User.Username()
 			if password, ok := parsedProxy.User.Password(); ok {
 				proxy["password"] = password
@@ -140,6 +141,15 @@ func (flaresolverrSolver) Solve(ctx context.Context, cfg ClearanceConfig, proxyU
 		return clearanceSolution{}, errors.New("FlareSolverr 返回的 User-Agent 无效")
 	}
 	return clearanceSolution{Cookies: cookies, UserAgent: userAgent}, nil
+}
+
+func flaresolverrSupportsProxyAuth(scheme string) bool {
+	switch strings.ToLower(strings.TrimSpace(scheme)) {
+	case "http", "socks4", "socks5":
+		return true
+	default:
+		return false
+	}
 }
 
 func sanitizeFlareSolverrMessage(value string) string {
