@@ -65,11 +65,11 @@ func (flaresolverrSolver) Solve(ctx context.Context, cfg ClearanceConfig, proxyU
 	}
 	if proxyURL != "" {
 		proxy := map[string]string{"url": proxyURL}
-		// FlareSolverr v3.3+ uses these fields for authenticated HTTP, SOCKS4,
-		// and SOCKS5 proxies. Retain the original URL so older deployments that
-		// only consume proxy.url preserve their existing behavior. Schemes that
-		// FlareSolverr does not document for authenticated proxy extensions keep
-		// their existing URL-only behavior.
+		// FlareSolverr uses Chromium for proxying. Chromium does not reliably
+		// perform username/password authentication for SOCKS proxies, so send
+		// separate credentials only for HTTP proxies. Retain the original URL for
+		// every scheme so deployments that only consume proxy.url preserve their
+		// existing behavior.
 		if parseErr == nil && parsedProxy != nil && parsedProxy.User != nil && flaresolverrSupportsProxyAuth(parsedProxy.Scheme) {
 			proxy["username"] = parsedProxy.User.Username()
 			if password, ok := parsedProxy.User.Password(); ok {
@@ -144,12 +144,7 @@ func (flaresolverrSolver) Solve(ctx context.Context, cfg ClearanceConfig, proxyU
 }
 
 func flaresolverrSupportsProxyAuth(scheme string) bool {
-	switch strings.ToLower(strings.TrimSpace(scheme)) {
-	case "http", "socks4", "socks5":
-		return true
-	default:
-		return false
-	}
+	return strings.EqualFold(strings.TrimSpace(scheme), "http")
 }
 
 func sanitizeFlareSolverrMessage(value string) string {
