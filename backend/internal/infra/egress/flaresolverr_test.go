@@ -42,7 +42,7 @@ func TestFlareSolverrSolveUsesNodeProxyAndFiltersCookies(t *testing.T) {
 	}
 }
 
-func TestFlareSolverrSolveSeparatesProxyCredentials(t *testing.T) {
+func TestFlareSolverrSolvePassesProxyCredentialsAndPreservesURL(t *testing.T) {
 	var requestPayload map[string]any
 	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		if err := json.NewDecoder(request.Body).Decode(&requestPayload); err != nil {
@@ -60,7 +60,7 @@ func TestFlareSolverrSolveSeparatesProxyCredentials(t *testing.T) {
 		t.Fatal(err)
 	}
 	proxy, ok := requestPayload["proxy"].(map[string]any)
-	if !ok || proxy["url"] != "http://proxy.example:11080" || proxy["username"] != "user" || proxy["password"] != "password" {
+	if !ok || proxy["url"] != "http://user:password@proxy.example:11080" || proxy["username"] != "user" || proxy["password"] != "password" {
 		t.Fatalf("proxy payload = %#v", requestPayload["proxy"])
 	}
 }
